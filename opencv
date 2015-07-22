@@ -1,0 +1,138 @@
+import g4p_controls.*;
+import org.opencv.imgproc.*;
+import gab.opencv.*;
+import org.opencv.core.*;
+import processing.video.*;
+
+
+
+OpenCV opencv;
+Capture video;
+
+public Mat matBGRA;
+
+int HrangeLow = 0,SrangeLow=0,BrangeLow=0;
+int HrangeHigh = 0,SrangeHigh,BrangeHigh=0;
+
+int erodecount = 0;
+int dilatecount = 0;
+int i;
+
+int width = 320;
+int height = 240;
+
+PImage h,s,b,hs,hsb;
+
+boolean flag = false;
+
+
+public void setup(){
+  size(640, 960, JAVA2D);
+  video = new Capture(this,width ,height );
+  opencv = new OpenCV(this, width, height);
+  video.start();
+  
+  createGUI();
+  customGUI();
+  
+  
+}
+
+public void draw(){
+  Mat rgba = new Mat();
+  Mat rgb = new Mat();
+  Mat YCrCb = new Mat();
+  Mat HSV = new Mat();
+  
+  HrangeHigh = Integer.valueOf(slider1.getValueS());
+  HrangeLow = Integer.valueOf(slider2.getValueS());
+  SrangeHigh = Integer.valueOf(slider5.getValueS());
+  SrangeLow = Integer.valueOf(slider6.getValueS());
+  BrangeHigh = Integer.valueOf(slider7.getValueS());
+  BrangeLow = Integer.valueOf(slider8.getValueS());
+  
+  erodecount = Integer.valueOf(slider3.getValueS());
+  dilatecount = Integer.valueOf(slider4.getValueS());
+  
+  
+  image(video, 0, 0);  
+  
+  // <2> Load the new frame of our movie in to OpenCV
+  opencv.loadImage(video);
+  
+  matBGRA = opencv.getColor();
+  ArrayList<Mat> mChannels = new ArrayList<Mat>(3);
+  Imgproc.cvtColor(matBGRA, HSV, Imgproc.COLOR_RGB2HSV);
+  Core.split(HSV, mChannels);
+  Mat H = mChannels.get(0);
+  Mat S = mChannels.get(1);
+  Mat B = mChannels.get(2);
+  
+  //mChannels.set(0, Cr);
+  //mChannels.set(2, Cr);
+  
+  Core.merge(mChannels, HSV);
+  
+  Core.inRange(HSV, new Scalar(HrangeLow, SrangeLow, BrangeLow), new Scalar(HrangeHigh, SrangeHigh, BrangeHigh), HSV);
+  
+  Imgproc.erode(HSV, HSV, new Mat(), new Point(0, 0), erodecount);
+  Imgproc.dilate(HSV, HSV, new Mat(), new Point(0, 0), dilatecount);
+  
+  
+  Moments mmm = Imgproc.moments(HSV);
+  int XX = (int) Math.round(mmm.get_m10() / mmm.get_m00());
+  int YY = (int) Math.round(mmm.get_m01() / mmm.get_m00());
+   ellipse(XX,YY,50,50);
+   
+   opencv.setGray(H);
+   opencv.inRange(HrangeLow, HrangeHigh);
+   h=opencv.getSnapshot();
+   image(h,width, 0,width,height);
+   
+   opencv.setGray(S);
+   opencv.inRange(SrangeLow, SrangeHigh);
+   s=opencv.getSnapshot();
+   image(s,0, height,width,height);
+   
+   opencv.diff(h);
+   opencv.threshold(0);
+   opencv.invert();
+   hs=opencv.getSnapshot();
+   //image(hs,0,height+height,width,height);
+   
+   
+   opencv.setGray(B);
+   opencv.inRange(BrangeLow, BrangeHigh);
+   b=opencv.getSnapshot();
+   image(b,width, height,width,height);
+   
+   opencv.diff(hs);
+   opencv.threshold(0);
+   for(i=0;i<erodecount;i++){
+     opencv.dilate();
+   }
+   for(i=0;i<dilatecount;i++){
+     opencv.erode();
+   }
+   
+   
+   
+   opencv.invert();
+   hsb=opencv.getSnapshot();
+   image(hsb,0,height+height,width,height);
+   
+   
+  
+
+  
+}
+
+void captureEvent(Capture c) {
+  c.read();
+}
+
+// Use this method to add additional statements
+// to customise the GUI controls
+public void customGUI(){
+
+}
